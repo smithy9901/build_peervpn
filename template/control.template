@@ -1,0 +1,10 @@
+Package: peervpn
+Version: ${APP_VERSION}
+Section: vpn
+Priority: optional
+Depends: libssl1.0-dev
+Architecture: all
+Essential: no
+Installed-Size: ${SIZE}
+Maintainer: smithy9901
+Description: Open source peer-to-peer VPN

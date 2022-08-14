@@ -1,0 +1,48 @@
+name: main
+
+on: workflow_dispatch
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        with:
+          path: ./${{ github.event.repository.name }}
+
+      - name: Check repo
+        uses: actions/checkout@v2
+        with:
+          repository: peervpn/peervpn
+          path: ./peervpn
+
+      - name: Build
+        id: docker_build
+        uses: docker/build-push-action@v2
+        with:
+          context: ./
+          file: ./${{ github.event.repository.name }}/Dockerfile
+          push: false
+          outputs: type=local,dest=./${{ github.event.repository.name }}/deb
+          build-args: "REPO_NAME=${{ github.event.repository.name }}"
+
+      - name: Set peervpn VERSION
+        run: |
+          echo "VERSION=$(dpkg-deb -I ./${{ github.event.repository.name }}/deb/peervpn.deb | grep "Version"| awk '{print $2}')" >> $GITHUB_ENV
+
+      - name: Check for modified files
+        id: git-check
+        run: |
+          cd  ./${{ github.event.repository.name }}
+          echo ::set-output name=modified::$([ -z "`git status --porcelain`" ] && echo "false" || echo "true")
+
+      - name: Commit package file
+        uses: stefanzweifel/git-auto-commit-action@v4
+        if: steps.git-check.outputs.modified == 'true'
+        with:
+          commit_message: New package version
+          repository: ./${{ github.event.repository.name }}
+          file_pattern: ./deb/*.deb
+          tagging_message: ${{ env.VERSION }}-${{ github.run_number }}
